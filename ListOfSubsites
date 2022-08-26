@@ -1,0 +1,16 @@
+<#
+This subsite report includes all the subsites within subsites. If you would like to run the 
+script for a site collection enter the url into the URL section, if you want the subsites of a
+site itself, enter the top site url. 
+#>
+
+
+$ReportFile="C:\Users\UserId\OneDrive\Scripts\SubsitesReport1.csv"
+
+#Connect to Site collection (parent or root site)
+
+Connect-PnPOnline -Url "https://contoso.sharepoint.com/sites/External/" -UseWebLogin
+#Get sub sites, Remove -Recurse if you do not want to get subsites of subsites. 
+Get-PnPSubWeb -Recurse | Select-Object -Property Title,ServerRelativeUrl,Id | Export-CSV $ReportFile -NoTypeInformation
+
+
