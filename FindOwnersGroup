@@ -1,0 +1,57 @@
+#Script to get members of specific owners group. 
+clear-host
+Write-host
+Write-host
+$DestinationSite = read-host "Please enter site URL"
+$SiteURL = $DestinationSite
+Write-host
+
+Connect-PnPOnline -Url $SiteURL -UseWebLogin
+
+
+function ExtractOwners() {
+{
+    
+    # Parameter help description
+    [Parameter(Mandatory=$true)] [string] $SiteURL,
+    [Parameter(Mandatory=$true)] [string] $CSVFile
+}
+    Clear-Host
+    $web = Get-PnPWeb -Includes RoleAssignments
+    write-host 'Looking for Owner Groups:'
+
+    foreach($ra in $web.RoleAssignments) {
+        $member = $ra.Member
+        $loginName = get-pnpproperty -ClientObject $member -Property LoginName
+        $rolebindings = get-pnpproperty -ClientObject $ra -Property RoleDefinitionBindings
+        
+        Get-PnPProperty -ClientObject $ra -Property RoleDefinitionBindings, Member
+        $PermissionLevels = $ra.RoleDefinitionBindings | Select -ExpandProperty Name
+        $PermissionType = $ra.Member.PrincipalType
+        
+
+        if($($PermissionLevels | Where { $_ -eq "Full Control"}) -and $PermissionType -eq "SharePointGroup") {
+          
+            write-host
+            write-host "$($loginName) - $($rolebindings.Name)"
+            write-host "----------------------------------------------------------------------"
+            $GroupMembers = Get-PnPGroupMember -Group $loginName -ErrorAction SilentlyContinue
+            $GroupMembers | Select -ExpandProperty Email
+            write-host "----------------------------------------------------------------------"
+            write-host
+                
+            } else {
+
+                # write-host "Finding members" -ForegroundColor DarkRed
+            }
+    }
+
+    Write-host -ForegroundColor Green 'Search Complete'
+    Disconnect-PnPOnline
+}
+
+
+
+
+# call the function above
+ExtractOwners -SiteURL $SiteURL 
