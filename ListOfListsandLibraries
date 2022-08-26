@@ -1,0 +1,14 @@
+#Set Variables
+$SiteURL = "https://contoso.sharepoint.com/sites/Group/CLIENTADV/CPR"
+  
+#Connect to PnP Online
+Connect-PnPOnline -Url $SiteURL -UseWebLogin
+  
+#Get all document libraries - Exclude Hidden Libraries{$_.BaseTemplate -eq 101 -and $_.Hidden -eq $false} 
+$DocumentLibraries = Get-PnPList | Where-Object {$_.BaseType -eq "DocumentLibrary" -or "List"}
+ 
+#Get Document Libraries Name, Default URL and Number of Items
+$DocumentLibraries | Select Title, DefaultViewURL, ItemCount
+
+
+#Read more: https://www.sharepointdiary.com/2019/02/get-all-document-libraries-sharepoint-online-pnp-powershell.html#ixzz7XbjHsziW
