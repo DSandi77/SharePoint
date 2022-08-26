@@ -1,5 +1,5 @@
 #Set Variables
-$SiteURL = "https://sunlifefinancial.sharepoint.com/sites/Group/CLIENTADV/CPR"
+$SiteURL = "https://contoso.sharepoint.com/sites/Group/CLIENTADV/CPR"
   
 #Connect to PnP Online
 Connect-PnPOnline -Url $SiteURL -UseWebLogin
