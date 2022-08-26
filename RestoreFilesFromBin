@@ -1,0 +1,163 @@
+# This script was create to recursively restore a folder in the 
+# first stage recycle bin when you have too many items in your Recycle Bin 
+# Getting "The attempted operation is prohibited because it exceeds the list view threshold enforce by administrator" Error
+# Required Module that can only be installed with admin rights to machine.  
+#Install-Module SharePointPnPPowerShellOnline
+
+
+#User input Vaidation
+
+
+function checkSiteURLInput {
+    do{
+        $DestinationSite = read-host "Please enter site URL" 
+        if (($DestinationSite -eq "")) {
+            write-host -ForegroundColor Red `n 'Site URL can not be empty or contain any spaces. Make sure there are no trailing or beginning spaces.'
+        } elseif (($DestinationSite -match ".aspx")) {
+            write-host -ForegroundColor Red `n 'Site URL contains site page url. .aspx. ' `n 'Remove .aspx including /sitepages so it looks like this: https://constoso.sharepoint.com/sites/Group/ProdDev/Pharma/DR/ '
+        } elseif ($DestinationSite -notmatch "https://") {
+            write-host -ForegroundColor Red `n 'Site URL missing https:// '
+        } elseif ($DestinationSite -notmatch "sunlifefinancial.sharepoint.com") {
+            write-host -ForegroundColor Red `n 'Site URL is not a valid Sun Life SharePoint site URL. '
+        } elseif ($DestinationSite -match "SitePages") {
+            write-host -ForegroundColor Red `n 'Site URL contains site page url. SitePages/' `n 'Remove /SitePages so it looks like this: https://contoso.sharepoint.com/sites/Group/ProdDev/Pharma/DR/ '
+        } else {
+            $script:siteUrl = $DestinationSite
+        }
+        Write-host
+    } while ($siteUrl -ne $DestinationSite)
+}
+
+# The Library that needs to be Restored Like this: sites/Group/GBProdDev/Pharma/DR/Shared Documents
+# This is so that the restore function only restores certain libraries and not other ones that are not required. 
+function checkLibraryURLInput {
+    do{
+        $DestinationLibrary = read-host "Please enter Library URL"
+        if ($DestinationLibrary -match "https://"){
+            write-host -ForegroundColor red `n 'Library URL can not include https:// please remove it so it looks like this: ' `n 'sites/Group/ProdDev/Pharma/DR/Shared Documents'
+        } elseif ($DestinationLibrary -match ".aspx"){
+            write-host -Foregroundcolor red `n 'URL includes .aspx, remove it so it looks like this:' `n 'sites/Group/GBProdDev/Pharma/DR/Shared Documents'
+        } elseif ($DestinationLibrary -match "Forms"){
+            write-host -foregroundcolor red `n 'URL can not contain Forms in it, please remove it so it looks like this: ' `n 'sites/Group/ProdDev/Pharma/DR/Shared Documents'
+        } elseif ($DestinationLibrary -match "sunlifefinancial.sharepoint.com"){
+            write-host -ForegroundColor red `n 'Library URL is not valid, please remove sunlifefinancial.sharepoint.com so it looks like this: ' `n 'sites/Group/ProdDev/Pharma/DR/Shared Documents'
+        } elseif ($DestinationLibrary -match "/sites"){
+            write-host -ForegroundColor red `n 'Library URL is not valid, please remove / before sites so it looks like this: ' `n 'sites/Group/ProdDev/Pharma/DR/Shared Documents'
+        } else {
+            $script:directoryToRestore = $DestinationLibrary
+        }
+        Write-host
+    }while ($directoryToRestore -ne $DestinationLibrary)
+    
+}
+
+#This is the date when the files where deleted. Count backwards from the todays day to the day that the
+# user confirmed that files where deleted. So if the files were deleted 4 days ago and deleted over a couple of days
+# but anything that has been deleted from 2 days ago should be kept. The first date will be -2 and the second one should be -4. 
+# Because of the time difference you might need to tweek the dates to -3 to -5. 
+function getDates {
+        $BeginningDate1 = Read-Host "Please enter the date in this format yyyy/MM/dd, if the date is from today enter tomorrows date."
+        $script:Date1 = [datetime]::ParseExact($BeginningDate1, 'yyyy/MM/dd', $null) 
+        $EndingDate = Read-Host "Please enter the date when they started deletion, of the in this format yyyy/MM/dd"
+        $script:Date2 = [datetime]::ParseExact($EndingDate, 'yyyy/MM/dd', $null) 
+}
+
+#Enter users email without any odd characters. 
+function userEmailCheck {
+    do {
+        $UserEmailInput = read-host "Please enter user email that deleted the content"
+        if ($UserEmailInput -match ' ') {
+            write-host -Foregroundcolor red `n 'Email can not be empty or contain any spaces. Make sure there are no trailing or beginning spaces.'
+        } elseif ($UserEmailInput -notmatch '@sunlife.com') {
+            write-host -ForegroundColor red 'The Email address does not contain @sunlife.com, try again.'
+        } else {
+            $Script:UserEmail = $UserEmailInput
+        }
+
+    }while ($UserEmail -ne $UserEmailInput)
+}
+
+function runRestore {
+    # A number higher than your count in the recyclebin
+    # You can use a high number, just know it will take longer to get 
+    # the restoreSet, the more items deleted the higher the number, but there should 
+    # be no need to change this number. 
+    $maxRows = 400000
+    #  -UseWebLogin used for 2 factor Auth.  You can remove if you don't have MFA turned on
+    try{
+        Connect-PnPOnline -Url $siteURL -UseWebLogin
+        Write-host " "
+        write-host "Info: Connected succesfully to Office 365" -foregroundcolor green
+        Write-host " "
+    } catch{
+        write-host "Error: Could not connect to Office 365" -foregroundcolor red
+    }
+
+    try{
+        $restoreSet = Get-PnPRecycleBinItem -FirstStage -RowLimit $maxRows | Where-Object {$_."Dirname" -Like $directoryToRestore + '/*' -or $_."Dirname" -Eq $directoryToRestore -and $_.DeletedByEmail -eq $UserEmail} | ? {($_.DeletedDate -gt $date2 -and $_.DeletedDate -lt $date1)} -ErrorAction Stop
+        #write-host "Info: Connected succesfully to SharePoint site" -foregroundcolor green
+    } catch {
+        write-host "Error: The link pasted in the Site URL is not a URL for a site. Make sure the link is not pointing to a Library/List" `n 'Run the script again with proper URL.' -foregroundcolor red
+    }
+    
+    $restoreSet = $restoreSet | Sort-Object -Property @{expression ='ItemType'; descending = $true},@{expression = "DirName"; descending = $false} , @{expression = "LeafName"; descending = $false} 
+
+    Write-Host 
+    Write-Host "Amount of items found:"
+    $restoreSet.Count 
+    Write-Host 
+
+    # Batch restore up to 200 at a time
+    # I have limited the restore to 1 item at a time so that it checks each file individually,
+    # batch restored prevents the restore of a batch if one file fails. 
+    $restoreList = $restoreSet | Select-Object Id, ItemType, LeafName, DirName
+    $apiCall = $siteUrl + "/_api/site/RecycleBin/RestoreByIds"
+    $restoreListCount = $restoreList.count
+    $start = 0
+    $leftToProcess = $restoreListCount - $start
+    while($leftToProcess -gt 0){
+        If($leftToProcess -lt 1){$numToProcess = $leftToProcess} Else {$numToProcess = 1}
+        #Write-Host -ForegroundColor Yellow "Building statement to restore the following $numToProcess files"
+        $body = "{""ids"":["
+        for($i=0; $i -lt $numToProcess; $i++){
+            $cur = $start + $i
+            $curItem = $restoreList[$cur]
+            $Id = $curItem.Id
+            #Write-Host -ForegroundColor Green "Restoring ", $curItem.ItemType, ": ", $curItem.DirName, "//", $curItem.LeafName
+            $body += """" + $Id + """"
+            If($i -ne $numToProcess - 1){ $body += "," }
+        }
+        $body += "]}"
+        #Write-Host -ForegroundColor Yellow $body
+        #Write-Host -ForegroundColor Yellow "Performing API Call to Restore items from RecycleBin..."
+        try {
+            Invoke-PnPSPRestMethod -Method Post -Url $apiCall -Content $body -ErrorAction stop | Out-Null 
+            Write-Host -ForegroundColor Green "Restored", $curItem.ItemType, ": ", $curItem.DirName, "//", $curItem.LeafName
+
+
+        }
+        catch {
+            #Below states that it was not able to restore the file, this is usually because the file already exists in sharepoint, 
+            #if you would like to see the URL of these items remove commented section below. 
+            Write-Host -ForegroundColor red "Unable to Restore", $curItem.ItemType,"might already exist", ":"<#, $curItem.DirName, "//"#>, $curItem.LeafName   
+        }
+        $start += 1
+        $leftToProcess = $restoreListCount - $start
+    }
+
+    Write-Host
+    Write-Host
+    Write-Host
+}
+
+Clear-Host
+Write-host -ForegroundColor Green "Right click on your mouse to paste into the terminal"
+Write-host
+
+checkSiteURLInput 
+checkLibraryURLInput 
+getDates 
+userEmailCheck 
+runRestore
+
+
