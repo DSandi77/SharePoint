@@ -75,3 +75,4 @@ Add-SPOSiteDesign -SiteScripts $siteScript.Id -Title $title -WebTemplate $webTem
 
 #https://learn.microsoft.com/en-us/sharepoint/dev/declarative-customization/get-started-create-site-design#create-the-site-template
 #https://laurakokkarinen.com/the-ultimate-guide-to-sharepoint-site-designs-and-site-scripts/#deploying-your-site-script-and-site-design
+#https://fluentuipr.z22.web.core.windows.net/heads/master/theming-designer/index.html
