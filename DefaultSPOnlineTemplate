@@ -1,0 +1,77 @@
+$adminSiteUrl = "https://05361-admin.sharepoint.com/"
+$title ="Gib Menu and Color Pink"
+$description = "Exernal Sharing disabled and dark theme"
+
+#Sitelogo only works in 68 and 1
+ $siteScriptCode = '
+ {
+    "$schema": "schema.json",
+    "actions": [
+        {
+            "verb": "applyTheme",
+            "themeJson": {
+                "version": "2",
+                "isInverted": false,
+                "palette": {
+                      "themePrimary": "#4a4a4a",
+                      "themeLighterAlt": "#f8f8f8",
+                      "themeLighter": "#e2e2e2",
+                      "themeLight": "#c9c9c9",
+                      "themeTertiary": "#929292",
+                      "themeSecondary": "#606060",
+                      "themeDarkAlt": "#434343",
+                      "themeDark": "#383838",
+                      "themeDarker": "#292929",
+                      "neutralLighterAlt": "#faf9f8",
+                      "neutralLighter": "#f3f2f1",
+                      "neutralLight": "#edebe9",
+                      "neutralQuaternaryAlt": "#e1dfdd",
+                      "neutralQuaternary": "#d0d0d0",
+                      "neutralTertiaryAlt": "#c8c6c4",
+                      "neutralTertiary": "#d696cc",
+                      "neutralSecondary": "#ae469d",
+                      "neutralSecondaryAlt": "#ae469d",
+                      "neutralPrimaryAlt": "#881074",
+                      "neutralPrimary": "#780064",
+                      "neutralDark": "#5b004c",
+                      "black": "#430038",
+                      "white": "#ffffff"
+                    }
+                }
+        },
+        {
+            "verb": "setSiteExternalSharingCapability",
+            "capability": "Disabled"
+        },
+       
+        {
+        "verb": "setSiteLogo",
+        "url": "https://navandental.ie/images/uploads/common/VHI_Healthcare_logo.svg.png"  
+        },
+        {
+          "verb": "setSiteBranding",
+          "navigationLayout": "Cascade",
+          "headerLayout": "Compact",
+          "headerBackground": "Strong",
+          "showFooter": true
+        },
+
+    ], 
+    "bindata": { }, 
+    "version": 1
+};
+ '
+
+#Change this number to either, 64, 68, or any other template that you would like to modify. 
+$webTemplate = "1" 
+
+
+Connect-SPOService $adminSiteUrl  
+
+#$jsonFileContent = Get-Content $siteScriptFile -Raw
+$siteScript = Add-SPOSiteScript -Title $title -Content $siteScriptCode | Select-Object -First 1 Id
+
+Add-SPOSiteDesign -SiteScripts $siteScript.Id -Title $title -WebTemplate $webTemplate -Description $description -IsDefault 
+
+#https://learn.microsoft.com/en-us/sharepoint/dev/declarative-customization/get-started-create-site-design#create-the-site-template
+#https://laurakokkarinen.com/the-ultimate-guide-to-sharepoint-site-designs-and-site-scripts/#deploying-your-site-script-and-site-design
