@@ -302,7 +302,7 @@ Write-Host
 $siteURL = read-host "Enter the Site URL"
 Write-Host
 $outPath = Read-Host "Enter the file name. "
-$reportFile = "C:\Users\y087\OneDrive - Sun Life Financial\001-Internal docs\SitePermissionRpt-$outPath.csv"
+$reportFile = "C:\Users\y087\OneDrive\001-Internal docs\SitePermissionRpt-$outPath.csv"
 write-host
 write-host
 write-host
